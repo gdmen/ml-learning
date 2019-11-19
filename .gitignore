@@ -1,3 +1,13 @@
+# Test models
+models/
+
+# Uncompressed images from training
+*.jpg
+
+# Editor files
+*.swp
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
