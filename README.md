@@ -1,5 +1,5 @@
-# dish-shamer
-A system to determine when there are unwashed dishes in the sink &amp; shame the perpetrators
+# ml-learning
+A test bed for ML image classification experiments
 
 # Usage:
 source .venv/bin/activate
