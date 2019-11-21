@@ -6,19 +6,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold
-from tensorflow.keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
-from tensorflow.keras.models import Sequential, load_model as LoadModel
+from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.layers import Conv2D, Dense, Dropout, Flatten, GlobalMaxPooling2D, MaxPooling2D
+from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 INPUT_DIR = "./data_dogs_v_cats"
 TRAIN_DIR = os.path.join(INPUT_DIR, "train")
 TEST_DIR = os.path.join(INPUT_DIR, "test")
-MODEL_FILE = "./models/dogs_v_cats.h5"
+MODEL_FILE = "./models/dogs_v_cats_v2.h5"
+MOBILENETV2_WEIGHTS = "./models/mobilenet_v2_weights_tf_dim_ordering_tf_kernels_1.0_224_no_top.h5"
 
 BATCH_SIZE= 128
 EPOCHS = 1
 IMG_HEIGHT = 150
-IMG_WIDTH = 150
+IMG_WIDTH = IMG_HEIGHT
 #K_FOLDS = 5
 
 def load_train_dataframe(input_dir, label_file="labels.csv"):
@@ -35,7 +37,7 @@ def predict_model(model, input_dir, batch_size=BATCH_SIZE, img_height=IMG_HEIGHT
         class_mode="binary",
         target_size=(img_height, img_width)
     )
-    num_steps = 100
+    num_steps = 10
     result = model.predict_generator(
         test_gen,
         steps=num_steps,
@@ -47,6 +49,10 @@ def predict_model(model, input_dir, batch_size=BATCH_SIZE, img_height=IMG_HEIGHT
 
 
 def create_model(img_height=IMG_HEIGHT, img_width=IMG_WIDTH):
+    return create_model_v2(img_height, img_width)
+
+
+def create_model_v1(img_height=IMG_HEIGHT, img_width=IMG_WIDTH):
     model = Sequential([
         Conv2D(16, 3, padding="same", activation="relu", input_shape=(img_height, img_width, 3)),
         MaxPooling2D(),
@@ -61,6 +67,25 @@ def create_model(img_height=IMG_HEIGHT, img_width=IMG_WIDTH):
     model.compile(optimizer='adam',
               loss='binary_crossentropy',
               metrics=['accuracy'])
+    return model
+
+
+def create_model_v2(img_height=IMG_HEIGHT, img_width=IMG_WIDTH):
+    base_model = MobileNetV2(
+        input_shape=(img_height, img_width, 3),
+        include_top=False,
+        weights=MOBILENETV2_WEIGHTS
+    )
+    base_model.trainable = False
+    model = Sequential([
+        base_model,
+        GlobalMaxPooling2D(),
+        Dense(1, activation='sigmoid')
+    ])
+    model.compile(optimizer='adam',
+                  loss='binary_crossentropy',
+                  metrics=['accuracy']
+    )
     return model
 
 
@@ -129,18 +154,14 @@ def train_model(input_dir, train_df, val_split=0.2, batch_size=BATCH_SIZE, epoch
     return model
 
 
-def load_model(model_file=MODEL_FILE):
-    model = LoadModel(model_file)
-    return model
-
 
 def main():
-    #train_df = load_train_dataframe(TRAIN_DIR)
-    #model = train_model(TRAIN_DIR, train_df, show_plot=True)
+    train_df = load_train_dataframe(TRAIN_DIR)
+    model = train_model(TRAIN_DIR, train_df, show_plot=True)
     # save model
     #model.save(MODEL_FILE)
-    model = load_model()
-    predict_model(model, TEST_DIR, batch_size=1)
+    #model = load_model(MODEL_FILE)
+    predict_model(model, TRAIN_DIR, batch_size=1)
 
 
 if __name__ == "__main__":
